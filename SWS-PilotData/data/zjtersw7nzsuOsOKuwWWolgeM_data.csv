@@ -1,0 +1,12 @@
+subject_id,trial_number,trial_id,target_sentence,foil_sentence,target_side,foil_side,trial_type,presentation_order,date_stamp,time_stamp,side_chosen,accuracy,rt,times_played,date_of_birth,ethnicity,native_lang,other_langs,parental_occ,dev_info,birth_order,num_siblings,gender
+zjtersw7nzsuOsOKuwWWolgeM,1,c,the_mouse_loves_cheese,the_cat_is_sleeping,right,left,training,1,9/19/2016,14:25,right,1,11961,2,2013-08-22,,,,,,2,1,female
+zjtersw7nzsuOsOKuwWWolgeM,2,b,the_frog_is_jumping,the_mouse_loves_cheese,left,right,training,0,9/19/2016,14:25,left,1,3953.999999999999,3,2013-08-22,,,,,,2,1,female
+zjtersw7nzsuOsOKuwWWolgeM,3,a,the_cat_is_sleeping,the_frog_is_jumping,right,left,training,1,9/19/2016,14:25,left,0,1805.999999999999,1,2013-08-22,,,,,,2,1,female
+zjtersw7nzsuOsOKuwWWolgeM,4,5,the_turtle_lives_in_the_sea,we_had_pasta_for_dinner,left,right,critical,0,9/19/2016,14:25,right,0,11684,3,2013-08-22,,,,,,2,1,female
+zjtersw7nzsuOsOKuwWWolgeM,5,20,the_cheese_is_tasty,she_bought_a_cake,left,right,critical,0,9/19/2016,14:25,right,0,4382.999999999999,2,2013-08-22,,,,,,2,1,female
+zjtersw7nzsuOsOKuwWWolgeM,6,13,the_butterfly_is_pretty,the_pizza_was_too_hot,right,left,critical,1,9/19/2016,14:25,right,1,5092.999999999999,2,2013-08-22,,,,,,2,1,female
+zjtersw7nzsuOsOKuwWWolgeM,7,3,the_horses_are_in_the_field,the_fish_are_in_the_river,left,right,critical,0,9/19/2016,14:25,right,0,3990.999999999999,1,2013-08-22,,,,,,2,1,female
+zjtersw7nzsuOsOKuwWWolgeM,8,21,he_is_peeling_a_banana,the_butterfly_is_pretty,right,left,critical,0,9/19/2016,14:25,left,0,7185.999999999999,1,2013-08-22,,,,,,2,1,female
+zjtersw7nzsuOsOKuwWWolgeM,9,24,the_monkey_is_up_in_the_tree,the_ladybirds_are_very_red,right,left,critical,0,9/19/2016,14:25,right,1,11910,1,2013-08-22,,,,,,2,1,female
+zjtersw7nzsuOsOKuwWWolgeM,10,11,the_dog_is_barking,the_cheese_is_tasty,left,right,critical,0,9/19/2016,14:25,left,1,14756,1,2013-08-22,,,,,,2,1,female
+zjtersw7nzsuOsOKuwWWolgeM,11,4,we_had_pasta_for_dinner,she_likes_eating_carrots,left,right,critical,0,9/19/2016,14:25,right,0,2881.999999999999,1,2013-08-22,,,,,,2,1,female

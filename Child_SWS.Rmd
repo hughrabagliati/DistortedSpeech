@@ -1,0 +1,1015 @@
+---
+title: "SineWaveSpeechInKids"
+author: "Hugh Rabagliati"
+date: "18/04/2017"
+output: 
+  html_document:
+    toc: true
+    number_sections: true
+    code_folding: hide
+    highlight: tango
+    theme: spacelab
+---
+
+```{r setup, include=FALSE, echo = FALSE}
+library(knitr)
+library(papeR)
+library(formattable)
+library(knitr)
+library(papeR)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(cache.lazy=FALSE)
+library(compute.es)
+library(cowplot)
+library(metafor)
+library(skewt)
+library(fitdistrplus)
+library(gamlss)
+library(gamlss.dist)
+library(lme4)
+library(ez)
+library(jsonlite)
+library(ggplot2)
+library(gridExtra)
+library(plyr)
+library(dplyr)
+library(doBy)
+library(sn)
+library(bootstrap)
+library(brms)
+library(tidyr)
+# From Mike Frank
+theta <- function(x,xdata,na.rm=T) {mean(xdata[x],na.rm=na.rm)}
+ci.low <- function(x,na.rm=T) {
+  quantile(bootstrap(1:length(x),1000,theta,x,na.rm=na.rm)$thetastar,.025,na.rm=na.rm)} #  mean(x,na.rm=na.rm) -
+ci.high <- function(x,na.rm=T) {
+  quantile(bootstrap(1:length(x),1000,theta,x,na.rm=na.rm)$thetastar,.975,na.rm=na.rm) } #- mean(x,na.rm=na.rm)}
+library(lubridate)
+library(ggplot2)
+library(readr)
+library(dplyr)
+
+ convert_stan_to_dataframe <- function(stan_object){
+   sum.df <- data.frame(summary(stan_object)$fixed)
+   sum.df$Diff_from_zero <- ifelse((sum.df$l.95..CI * sum.df$u.95..CI) > 0, "*","-")
+   return(sum.df)
+ }
+
+ library(rstan)
+library(ggplot2)
+library(doBy)
+library(brms)
+
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+set.seed(123)
+ 
+```
+
+
+# Intro
+
+We conducted three experiments examining children's ability to understand sine wave speech. Experiment 1 also assessed children's ability to understand Mooney pictures. The different experiments examined baseline interpretation of sine wave speech, pop out effects, and perceptual learning.
+
+# Experiment 1 -- Match to sample
+
+Children in this study had to match a human speech sentence to one of two robot (i.e., sine wave speech) sentences, or they had to match a clear picture to one of two Mooney pictures.
+
+```{r Experiment_1_SWS,include=FALSE,  echo = FALSE}
+moo_csv <- dir(path = "./Moo-PilotData/data",pattern='*.csv$', recursive = T,full.names = T)
+
+sws_csv <- dir(path = "./SWS-PilotData/data",pattern='*.csv$', recursive = T,full.names = T)
+
+read_TD_data <- function(csv,type){
+word <- bind_rows(lapply(csv, read.csv))
+word$DOT <- parse_date_time(word$date_stamp, "%m/%d/%Y")
+word$DOB <- parse_date_time(word$date_of_birth,c("%Y-%m-%d","%d/%m.%y"))
+word$age_weeks <- difftime(word$DOT,word$DOB,units = "weeks")
+word$age <- as.numeric(floor(word$age_weeks/52))
+word <- subset(word, age > 1 & age <= 9)
+word$age <- ordered(word$age)
+
+word$agegroup <- ifelse(word$age <= 4,"younger than 4","older than 5")
+word$agegroup <- ordered(word$agegroup, levels = c("younger than 4","older than 5"))
+word <- subset(word, trial_type == "critical" )
+word$type <- type
+return(word)
+}
+
+expt1_summarize_for_graph <- function(word){
+word.acc.graph <- word %>%
+	dplyr::select(rt,accuracy,subject_id,age,type) %>%
+	dplyr::group_by(subject_id,age,type) %>%
+	dplyr::summarise(acc.m = mean(accuracy,na.rm = T),rt.m = mean(rt,na.rm = T)) %>% 
+	dplyr::group_by(age,type) %>%
+	dplyr::select(acc.m,rt.m,subject_id,age,type) %>%
+	dplyr::summarise(acc.mean = mean(acc.m,na.rm = T),acc.sd = sd(acc.m,na.rm=T),rt.mean = mean(rt.m, na.rm = T), rt.sd = sd(rt.m,na.rm = T),acc.low = ci.low(acc.m),acc.high = ci.high(acc.m),rt.low = ci.low(rt.m),rt.high = ci.high(rt.m)) 
+return(word.acc.graph)
+}
+
+sws <- read_TD_data(sws_csv,"Sine-Wave Speech")
+moo <- read_TD_data(moo_csv,"Mooney Pictures")
+
+topdown_data <- rbind.fill(moo,sws)
+
+topdown_data_summary <- topdown_data %>%
+ 	dplyr::select(accuracy,subject_id,age,type) %>%
+ 	dplyr::group_by(subject_id,age,type) %>%
+ 	dplyr::summarise(responded = mean(accuracy,na.rm = T)) %>% 
+ 	dplyr::group_by(age,type) %>%
+ 	dplyr::select(responded,subject_id,age,type) %>%
+ 	dplyr::summarise(n = length(responded))
+
+topdown_data_graph <- rbind(expt1_summarize_for_graph(moo),expt1_summarize_for_graph(sws))
+
+```
+
+## Methods
+Participants were tested at the Edinburgh Zoo, the Edinburgh DevLab, and in the local community. This was a low n pilot study; the table below shows participants per age group.
+
+`r kable(tidyr::spread(topdown_data_summary,type,n))`
+
+Participants completed 3 practice trials with blurred images or noise distorted speech, followed by 24 test trials with mooney images or sine wave speech. On each trial, the child had to select either which of the robot's pictures matched the teacher's standard, or which of the robot's sentences matched the teacher's standard. To play the sentences, the experimenter tapped the Teacher. Triplets of sentences could be repeated (but not individual sentences).
+
+![Left: 2AFC Mooney picture choice. Right: 2AFC sine wave speech choice](Images/expt1_moon_sine.png)
+
+
+
+## Graph of Experiment 1 by Age
+
+Comparing age groups across the two studies. Most participants (but not all) did both experiments. Errors bars are 95% CIs
+```{r expt1_graph, echo=FALSE}
+
+dodge <- position_dodge(width=0.9)
+ggplot(topdown_data_graph, aes(age,acc.mean, fill = age)) + facet_grid(.~type)+
+  geom_bar(stat = "identity",  position = dodge) +
+  geom_errorbar(aes(ymax = topdown_data_graph$acc.high, ymin = topdown_data_graph$acc.low), width=0.25, position = dodge) +
+  theme(axis.text.x = element_text(colour = "black", size = 12)) +
+  ylab("Accuracy") +
+  xlab("Age (years)") + 
+  ylim(c(0,1))+guides(fill=FALSE)+
+  theme_cowplot()+
+  geom_hline(yintercept=0.5, linetype="dashed", color="black", size=0.5)
+```
+
+All age groups were above chance when interpreting Mooney pictures, altho 2-year-olds had relatively low performance. 2- and 3-year-olds were not credibly different from chance when interpreting Sine Wave speech. Performance on the sine wave speech task had a more gradual improvement with age.
+
+## Conclusions
+Experiment 1 suggested that sine wave speech was harder to interpret than Mooney pictures, although the youngest children showed limited skill on both tasks. We had two concerns about this manipulation, however. First, the sine wave speech task places more of a demand on working memory (as you are matching a heard sentence to a previously heard sample, rather than matching a visible picture to a visible sample). Second, 2AFC may be a conceptually difficult task for young children. Anecdotally, my RAs reported that this task was difficult for the younger children, especially the sine wave speech task.
+
+Our subsequent two experiments only assessed sine wave speech. In Experiment 2, we moved to a method that we thought might be more naturalistic -- picture selection.
+
+
+# Experiment 2
+
+Participants in Experiment 2 did a word recognition task. We thought that this method might better allow younger children to demonstrate their ability to process sine wave speech. Moreover, it also allowed us to assess children's processing of sine wave sentences when heard naively, versus when heard after a clear speech prime. As a little extra bonus, we also assessed adults, and a second group of adults who were beginner learners of Italian (with stimuli translated into Italian).
+
+Participants in this study were 3- and 4-year-olds learning English, adult English speakers learning Italian (with the stimuli translated into Italian), and adult English speakers. They saw three pictures on each trial and heard three sentences (e.g., *point to the dog*). The third sentence was always sine wave speech. On half of the trials the sine wave speech sentence mentioned the so-far untouched picture (i.e., it was a novel sentence, the **different** condition), and on  half of the trials it mentioned one of the previously mentioned pictures (either repeating the first heard-sentence [**far** condition] or the second-heard sentence [**near** condition]). For half of the participants the sine wave speech sentences used the same voice as the clear sentences [**match** condition], and for half of the trials it used a different gender voice [**mismatch** condition].
+
+Unfortunately this design led to a large response bias in children, to touch the unmentioned picture on the third instruction.
+
+```{r expt2_process, echo=FALSE, include = FALSE}
+library(lme4)
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(readr)
+library(dplyr)
+library(doBy)
+## for bootstrapping 95% confidence intervals -- from Mike Frank https://github.com/langcog/KTE/blob/master/mcf.useful.R
+library(bootstrap)
+read_TD_data <- function(csv,type){
+  word <- bind_rows(lapply(csv, read.csv, colClasses = c("num_siblings"="character","birth_order" = "character","subject_id" = "character")))
+  
+  word$DOT <- lubridate::parse_date_time(word$date_stamp, "%m/%d/%Y")
+  word$DOB <- lubridate::parse_date_time(word$date_of_birth,c("%Y-%m-%d","%d/%m.%y"))
+  #word$age_weeks <- difftime(word$DOT,word$DOB,units = "weeks")
+  #word$age <- as.numeric(floor(word$age_weeks/26)/2)
+  #word <- subset(word, age > 1 & age <= 9)
+  #word$age <- ordered(word$age)
+  word$Experiment = type
+  word$trial_type <- as.factor(word$trial_type)
+  #word <- subset(word, trial_type == "critical" )
+  word$resp <- ifelse(word$accuracy == "true",1,0)
+  word$speaker_match <- as.factor(ifelse((word$plain == "fem_plain" & word$sws == "fem_sws")|(word$plain == "mal_plain" & word$sws == "mal_sws"),"Speaker Match","Speaker Mismatch"))
+  return(word)
+}
+
+process_sine_data <- function(path,subject_list){
+  
+  sine_words_csv <- dir(path = path,pattern='*.csv$', recursive = T,full.names = T)
+  
+  sine_words <- read_TD_data(sine_words_csv,"Sine Words")
+  sine_words$testing_loc <- as.factor(sine_words$testing_loc)
+  sine_words<- subset(sine_words,trial_type == "critical")
+  sine_words <- subset(sine_words, testing_loc != "pilot")
+  sine_words$clarity <- as.factor(ifelse(sine_words$instruction_number %in% c(1,2),"clear","distorted"))
+  sine_words$novelty <- as.factor(ifelse(sine_words$distance %in% c("different"),"novel","familiar"))
+  sine_words$age <- NA
+  sine_words$lang <- NA
+  
+  sine_words$choose_unmentioned <- ifelse(sine_words$chosen_pic == sine_words$sound1_item,0,ifelse(sine_words$chosen_pic == sine_words$sound2_item,0,1))
+  subj_list <- read.csv(subject_list, header =  T)
+  sine_words <- merge(sine_words,subj_list, by = "subject_id")
+  }
+
+children <- process_sine_data("./Expt2_Words/CHILDREN/","./Expt2_Words/children_subject_list.csv")
+children$Group <- "Children"
+adults <- process_sine_data("./Expt2_Words/ADULTS/","./Expt2_Words/adult_subject_list.csv")
+adults$Group <- "Adults: 1st Lang"
+italians <- process_sine_data("./Expt2_Words/ITALIAN/","./Expt2_Words/italian_subject_list.csv")
+italians$Group <- "Adults: 2nd Lang"
+expt2 <- rbind(children,adults,italians)
+
+expt2$Group2 <- expt2$Group
+expt2[expt2$age_years %in%c("2","3"),]$Group2 <- "Younger Children"
+expt2[expt2$age_years %in%c("4","5"),]$Group2 <- "Older Children"
+
+```
+
+## Methods
+
+Participants were tested in preschools around Perthshire, in the Edinburgh DevLab, and in the Edinburgh University community. 2nd language speakers were taken from an Introductory Italian class at Edinburgh University. The table below shows participants per age group.
+
+
+```{r expt2_methods}
+expt2_summary <- expt2 %>%
+ 	dplyr::select(resp,subject_id,age_years,Group) %>%
+ 	dplyr::group_by(subject_id,age_years,Group) %>%
+ 	dplyr::summarise(responded = mean(resp,na.rm = T)) %>% 
+ 	dplyr::group_by(age_years,Group) %>%
+ 	dplyr::select(responded,subject_id,age_years,Group) %>%
+ 	dplyr::summarise(n = length(responded))
+```
+
+`r kable(tidyr::spread(expt2_summary,Group,n))`
+
+
+Participants completed 1 practice trial with sine wave speech, followed by 24 test trials. On each trial, participants would see three pictures and hear three instructions; they had to tap the mentioned picture after each instruction. The Experimenter tapped the green button to produce each instruction. 
+
+Words/pictures were chosen such that CDI norms show that 75% of 2-year-olds know that word.
+
+![3 choice word recognition task](Images/expt2.png)
+
+
+## Graphs & Analyses
+
+We look at average accuracy by group (Graph 1), and also at the probability with which they choose the unmentioned item (Graph 2). 
+
+1st language Adults have little difficulty when speakers match, but more difficulty when they mismatch. 2nd language adults have more difficulty overall. Children have high accuracy on the unheard word condition because of their response bias. It is thus hard to interpret their other results, but they are above chance, assuming a big criterion effect, and they clearly interpret the repeated distorted speech to be distinct from the unrepeated distorted speech (i.e., the 'different' condition).
+
+### Overall data
+
+First we graph overall performance, then exclude trials where participants did not recognise one of the clear speech items. We collapse children into a single group, because there do not appear to be any interesting developmental differences.
+
+You can see that accuracy is generally quite high for clear speech items, even in young children (suggesting the task is simple). But accuracy declines for distorted speech across all groups, especially for children and 2nd language speakers. 
+
+You can easily see the response bias -- children are considerably more accuracte on "different" trials, i.e., the unheard word, than on Near/Far trials.
+
+```{r expt2_graphs}
+
+ggplot(expt2, aes(x = distance, y = resp, color = clarity))+
+  facet_wrap(~speaker_match+Group,nrow=2) + 
+  ylim(c(0,1))+
+  stat_summary_bin(fun.data = mean_cl_boot)+
+  theme_cowplot()+
+  ggtitle("Accuracy across groups and conditions")+
+  xlab("Condition (Unheard word, far prior word, near prior word)")+
+  ylab("Accuracy")+
+  labs(caption = "")
+
+#######
+# Exclude trials where they got a clear word wrong
+wrong_clear <- summaryBy(resp ~ subject_id + trial_id, data = subset(expt2, clarity != "distorted")) 
+wrong_clear <- subset(wrong_clear, resp.mean <1)
+wrong_clear$subj_trial <- paste(wrong_clear$subject_id, wrong_clear$trial_id)
+expt2$subj_trial <- paste(expt2$subject_id,expt2$trial_id)
+expt2 <- expt2[!expt2$subj_trial %in% wrong_clear$subj_trial,]
+
+```
+
+### Corrected graphs
+
+To minimize the possibility that our analyses are contaminated by effects of lexical knowledge, we remove trials on which participants made a mistake on clear items (i.e., we only assess children's behavior on words that we have good reason to believe they know). All analyses are now done on this restricted dataset.
+
+```{r expt2_graphs_exclusions}
+
+ggplot(expt2, aes(x = distance, y = resp, color = clarity))+
+  facet_wrap(~speaker_match+Group,nrow=2) + 
+  ylim(c(0,1))+
+  stat_summary_bin(fun.data = mean_cl_boot)+
+  theme_cowplot()+
+  ggtitle("Accuracy across groups and conditions")+
+  xlab("Condition (Unheard word, far prior word, near prior word)")+
+  ylab("Accuracy")+
+  labs(caption = "")
+```
+
+
+#### Response bias
+The graph below illustrates the response bias in children; a tendency to choose the picture that was unmentioned on clear speech trials.
+
+```{r expt2_graphs_resp_bias}
+
+ggplot(expt2, aes(x = distance, y = choose_unmentioned, color = clarity))+
+  facet_wrap(~speaker_match+Group,nrow=2) + ylim(c(0,1))+
+  stat_summary_bin(fun.data = mean_cl_boot)+theme_cowplot()+ggtitle("Choice of unmentioned picture across groups and conditions")+xlab("Condition (Unheard word, far prior word, near prior word)")+ylab("Choose unmentioned picture")
+```
+
+```{r expt2_analyses, echo=FALSE, include=FALSE}
+compare_children_2ndLang <- brm(resp ~ Group + (1|subject_id), data = subset(expt2, Group != "Adults: 1st Lang"& clarity == "distorted"), family = "bernoulli", iter = 1000, chains = 4)
+
+compare_children_1stLang <- brm(resp ~ Group + (1|subject_id), data = subset(expt2, Group != "Adults: 2nd Lang"& clarity == "distorted"), family = "bernoulli", iter = 1000, chains = 4)
+
+compare_1st_2ndLang <- brm(resp ~ Group + (1|subject_id), data = subset(expt2, Group != "Children"& clarity == "distorted"), family = "bernoulli", iter = 1000, chains = 4)
+
+compare_children_1stLang_distorted <- brm(resp ~ Group + (1|subject_id), data = subset(expt2, Group != "Adults: 2nd Lang" & clarity == "distorted"), family = "bernoulli", iter = 1000, chains = 4)
+
+```
+
+
+```{r expt2_speaker_match_analyses, echo = FALSE, include = FALSE}
+
+compare_1st_2nd_speaker_match <- brm(resp ~ speaker_match*Group + (1|subject_id), data = subset(expt2, Group != "Children" & clarity == "distorted"), family = "bernoulli", iter = 1000, chains = 4)
+
+compare_children_1st_speaker_match <-brm(resp ~ speaker_match*Group + (1|subject_id), data = subset(expt2, Group != "Adults: 2nd Lang" & clarity == "distorted"), family = "bernoulli", iter = 1000, chains = 4)
+
+  compare_children_2nd_speaker_match <-brm(resp ~ speaker_match*Group + (1|subject_id), data = subset(expt2, Group != "Adults: 1st Lang" & clarity == "distorted"), family = "bernoulli", iter = 1000, chains = 4)
+  
+  children_match <-brm(resp ~ speaker_match + (1|subject_id), data = subset(expt2, Group == "Children" & clarity == "distorted"), family = "bernoulli", iter = 1000, chains = 4)
+    
+  adult_1st_match <-brm(resp ~ speaker_match + (1|subject_id), data = subset(expt2, Group == "Adults: 1st Lang" & clarity == "distorted"), family = "bernoulli", iter = 1000, chains = 4)
+        
+  adult_2nd_match <-brm(resp ~ speaker_match + (1|subject_id), data = subset(expt2, Group == "Adults: 2nd Lang" & clarity == "distorted"), family = "bernoulli", iter = 1000, chains = 4)
+
+```
+
+
+### Change in accuracy for distorted speech across groups
+Because 1st language adults were close to ceiling in both conditions, and children were close to ceiling on clear speech, not all logistic models that include all conditions converge, and some produce parameter estimates that seem incorrect, e.g., that the decrement in accuracy for distorted speech compared to clear speech was larger for 1st language adults than for children. So, with that warning, we present the analyses of distorted speech accuracy across groups.
+
+
+```{r displayexpt2_analyses}
+z<-1
+kable(convert_stan_to_dataframe(compare_children_1stLang),digits=2, caption = "Accuracy understanding distorted speech for children vs. Adults (1st lang)")
+
+kable(convert_stan_to_dataframe(compare_children_2ndLang),digits=2, caption = "Accuracy understanding distorted speech for children vs. 2nd language learners")
+
+kable(convert_stan_to_dataframe(compare_1st_2ndLang),digits=2, caption = "Accuracy understanding distorted speech for Adult 1st language vs. 2nd language learners")
+
+#kable(convert_stan_to_dataframe(compare_children_1stLang_distorted),digits=2, caption = "Accuracy on distorted speech for Children vs Adults 1st language")
+
+
+```
+
+### The effect of speaker match on distorted speech comprehension across groups
+We also compared overall accuracy on distorted speech across groups depending on whether the distorted and undistorted voices matched. We see interactions between children and adults (both groups), such that children are actually **less affected** by speaker match -- this might hint that children are really failing to use the top-down cue here. But when analyzed separately, 1st and 2nd language adults don't show the speaker_match effect. That is to say, there is a difference between groups, but neither group is credibly different from zero.
+
+#### Interaction effects
+
+```{r displayexpt2_analyses_match}
+z<-1
+kable(convert_stan_to_dataframe(compare_children_1st_speaker_match),digits=2, caption = "Matching vs mismatching distorted speech for children vs. 1st language adults")
+
+kable(convert_stan_to_dataframe(compare_children_2nd_speaker_match),digits=2, caption = "Matching vs mismatching distorted speech for children vs. 2nd language adults")
+
+kable(convert_stan_to_dataframe(compare_1st_2nd_speaker_match),digits=2, caption = "Matching vs mismatching distorted speech for 1st language adults vs 2nd language")
+```
+
+#### Simple effects
+```{r displayexpt2_analyses_match_simple}
+z<-1
+kable(convert_stan_to_dataframe(children_match),digits=2, caption = "Matching vs mismatching distorted speech for children")
+
+kable(convert_stan_to_dataframe(adult_1st_match),digits=2, caption = "Matching vs mismatching distorted speech for 1st language adults")
+
+kable(convert_stan_to_dataframe(adult_2nd_match),digits=2, caption = "Matching vs mismatching distorted speech for 2nd language adults")
+
+
+```
+
+### The effect of prime distance on interpretation
+Do different participant groups perform better on close primed stimuli or far primed stimuli?
+
+```{r expt2_prime_distance_analyses, echo = FALSE, include = FALSE}
+z<-1
+  child_distance <-brm(resp ~ distance + (1+distance||subject_id), data = subset(expt2, Group == "Children" & clarity == "distorted" & novelty == "familiar"), family = "bernoulli", iter = 1000, chains = 4)
+
+  second_lang_distance <-brm(resp ~ distance + (1+distance||subject_id), data = subset(expt2, Group == "Adults: 2nd Lang" & clarity == "distorted" & novelty == "familiar"), family = "bernoulli", iter = 1000, chains = 4)
+
+  first_lang_distance <-brm(resp ~ distance + (1|subject_id), data = subset(expt2, Group == "Adults: 1st Lang" & clarity == "distorted" & novelty == "familiar"), family = "bernoulli", iter = 2000, chains = 4) # Had to remove random slope due to convergence issues.
+
+```
+
+```{r displayexpt2_analyses_prime_dist}
+z<- 2
+kable(convert_stan_to_dataframe(child_distance),digits=2, caption = "Effect of prime distance for children")
+
+kable(convert_stan_to_dataframe(first_lang_distance),digits=2, caption = "Effect of prime distance for 1st language adults")
+
+kable(convert_stan_to_dataframe(second_lang_distance),digits=2, caption = "Effect of prime distance for 2nd language adults")
+
+```
+
+
+### Learning over the experiment
+
+Did participants' accuracy increase over the study? Yes for 1st language adults, no for children. But it is unclear for 2nd language adults -- probably we need a larger sample.
+
+
+#### Learning
+This graph illustrates learning over time. You can see that 1st language adults appear to improve a little, and perhaps 2nd language adults too. But not Children.
+
+```{r expt2_graphs_learning}
+
+ggplot(subset(expt2, clarity == "distorted"), aes(x = trial_number, y = resp, color = Group))+
+  geom_smooth(method = "glm", method.args = list(family = "binomial")) + 
+  ylim(c(0,1.05))+
+  ggtitle("Change in accuracy over the study")+
+  stat_summary_bin(fun.data = mean_cl_boot)+
+  ylab("Accuracy")+
+  xlab("Trial number")
+```
+
+
+
+```{r learning_analyses, echo=FALSE, include=FALSE}
+learning_overall <- brm(resp ~ scale(trial_number)*Group + (1+scale(trial_number)||subject_id), data = subset(expt2,  clarity == "distorted" ), family = "bernoulli", iter = 1000, chains = 4)
+learning_children <- brm(resp ~ scale(trial_number) + (1+scale(trial_number)||subject_id), data = subset(expt2,  Group == "Children" & clarity == "distorted" ), family = "bernoulli", iter = 1000, chains = 4)
+learning_first_lang <- brm(resp ~ scale(trial_number) + (1|subject_id), data = subset(expt2,  Group == "Adults: 1st Lang" & clarity == "distorted" ), family = "bernoulli", iter = 1000, chains = 4) # Remove slope to aide convergence
+learning_second_lang <- brm(resp ~ scale(trial_number) + (1+scale(trial_number)||subject_id), data = subset(expt2,  Group == "Adults: 2nd Lang" & clarity == "distorted" ), family = "bernoulli", iter = 1000, chains = 4)
+```
+
+```{r display_learning_analyses}
+kable(convert_stan_to_dataframe(learning_overall),digits=2, caption = "Effect of learning over trials across groups")
+kable(convert_stan_to_dataframe(learning_children),digits=2, caption = "Effect of learning over trials for children")
+kable(convert_stan_to_dataframe(learning_first_lang),digits=2, caption = "Effect of learning over trials for first lang adults")
+kable(convert_stan_to_dataframe(learning_second_lang),digits=2, caption = "Effect of learning over trials for second lang adults")
+z<-1
+
+```
+
+
+#### Repetitions
+This graph illustrates the (log) number of times that participants were given a repetition of the clear/distorted speech. Different colored lines indicate if the stimuli were on familiar trials (distorted speech as a repetition) or not. Children were given more repetitions overall.
+
+```{r expt2_graphs_repetitions}
+
+repetition <- ggplot(expt2, aes(x = trial_number, y = log(play_counter), color= novelty))+
+  geom_smooth(method = "loess")+
+  facet_wrap(~clarity+Group,ncol=3, nrow = 2) + 
+  ylab("log Number of repetitions per trial")+
+  ggtitle("Repetitions per trial over the study")
+repetition
+
+```
+
+## Conclusions
+
+While Experiment 2 provided evidence that younger children can indeed interpret sine wave speech, they clearly were error prone in doing so. Unfortunately this experimental design was greatly contaminated by response bias, which makes it hard to draw strong conclusions, particularly about whether children show top-down pop out effects.
+
+We replicated a finding by Nittrouer and Lowenstein (2013) that second-language learners have difficulty interpreting sine wave speech. This is particularly interesting, because it raises the possibility that children's difficulties are not driven by immature top-down connections, but by incomplete linguistic knowledge.
+
+Our next Experiment had three goals: 
+
+* To assess children's interpretation of sine wave speech once the response bias was removed
+* To assess whether children show a "pop out" effect
+* To assess whether learning to understand sine wae speech is facilitated when top-down information is present.   
+
+# Experiment 3 -- Perceptual learning
+
+Participants in Experiment 3 also did a word recognition task, but here we a) removed the response bias, and b) added a perceptual learning component. Participants saw two pictures on each trial and heard three sentences (e.g., *point to the dog*). They heard 24 trials altogether (plus one practice at the start). The first 16 trials were training trials, and the final 8 trials assessed learning and generalization. The order in which participants heard the first 16 sentences determined whether their learning was top-down guided, or not. For the top-down guidance participants, the third sentence was always sine wave speech, and it was a distorted repetition of one of the two previously heard sentences. For the unguided participants, the first sentence was always sine wave speech, and it was a distorted version of a sentence that they would eventually hear. This design thus allowed us to manipulate learning style (top-down or not) and also to test whether children show pop-out effects (if so, they should be more accurate during top-down training trials).
+
+The final 8 trials were always presented in the order Distorted-Clear-Clear, in order to test learning and generalization.
+
+Participants in this study were 2- 3- and 4-year-olds learning English.
+
+```{r expt3_import_data, echo=FALSE, include=FALSE}
+library(lme4)
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(readr)
+library(dplyr)
+library(doBy)
+library(cowplot)
+## for bootstrapping 95% confidence intervals -- from Mike Frank https://github.com/langcog/KTE/blob/master/mcf.useful.R
+library(bootstrap)
+theta <- function(x,xdata,na.rm=T) {mean(xdata[x],na.rm=na.rm)}
+ci.low <- function(x,na.rm=T) {
+  quantile(bootstrap(1:length(x),1000,theta,x,na.rm=na.rm)$thetastar,.025,na.rm=na.rm)} #  mean(x,na.rm=na.rm) -
+ci.high <- function(x,na.rm=T) {
+  quantile(bootstrap(1:length(x),1000,theta,x,na.rm=na.rm)$thetastar,.975,na.rm=na.rm) } #- mean(x,na.rm=na.rm)}
+
+
+
+read_TD_data <- function(csv,type){
+  word <- bind_rows(lapply(csv, read.csv, colClasses = c("num_siblings"="character", "accuracy" = "character",
+                                                         "birth_order" = "character")))
+  
+  word$DOT <- parse_date_time(word$date_stamp, "%m/%d/%Y")
+  word$DOB <- parse_date_time(word$date_of_birth,c("%Y-%m-%d","%d/%m.%y"))
+  word$age_weeks <- as.numeric(difftime(word$DOT,word$DOB,units = "weeks"))
+  word$age <- floor(word$age_weeks/52)
+  #word <- subset(word, age > 1 & age <= 9)
+  word$age <- ordered(word$age)
+  word$Experiment = type
+  word$trial_type <- as.factor(word$trial_type)
+  #word <- subset(word, trial_type == "critical" )
+  word$resp <- ifelse(word$accuracy == "true",1,0)
+  word$speaker_match <- as.factor(ifelse((word$plain == "fem_plain" & word$sws == "fem_sws")|(word$plain == "mal_plain" & word$sws == "mal_sws"),"Speaker Match","Speaker Mismatch"))
+  return(word)
+}
+
+process_sine_data <- function(path){
+  
+  sine_words_csv <- dir(path = path,pattern='*.csv$', recursive = T,full.names = T)
+  
+  sine_words <- read_TD_data(sine_words_csv,"Sine Words")
+  sine_words$testing_loc <- as.factor(sine_words$testing_loc)
+  sine_words<- subset(sine_words,trial_type == "critical")
+  sine_words <- subset(sine_words, testing_loc != "pilot")
+  sine_words$clarity <- NA
+  sine_words[sine_words$test_lang == "Clear_After",]$clarity <- as.factor(ifelse(sine_words[sine_words$test_lang == "Clear_After",]$instruction_number %in% c(2,3),"clear","distorted"))
+  sine_words[sine_words$test_lang == "Clear_Before" & sine_words$trial_number <=17,]$clarity <- as.factor(ifelse(sine_words[sine_words$test_lang == "Clear_Before" & sine_words$trial_number <=17,]$instruction_number %in% c(1,2),"clear","distorted"))
+  sine_words[sine_words$test_lang == "Clear_Before" & sine_words$trial_number >17,]$clarity <- as.factor(ifelse(sine_words[sine_words$test_lang == "Clear_Before" & sine_words$trial_number >17,]$instruction_number %in% c(2,3),"clear","distorted"))
+  
+  sine_words$novelty <- as.factor(ifelse(sine_words$distance %in% c("different"),"novel","familiar"))
+  #sine_words$age <- NA
+  #sine_words$lang <- NA
+  
+  #sine_words$choose_unmentioned <- ifelse(sine_words$chosen_pic == sine_words$sound1_item,0,ifelse(sine_words$chosen_pic == sine_words$sound2_item,0,1))
+  #subj_list <- read.csv(subject_list, header =  T)
+  #sine_words <- merge(sine_words,subj_list, by = "subject_id")
+  return(sine_words)
+  }
+
+children <- process_sine_data("./Expt3_Learning/Data")
+
+########
+# There was a slight error in the original js script, such that a couple of columns got transposed for
+# one condition. So, we need to fix that and then adjust the accuracy scores to account for it
+children$re_pic1 = children$sound1_item
+children$re_pic2 = children$sound2_item
+children$re_pic3 = children$sound3_item
+children[children$test_lang == "Clear_After" & children$order %in% c("1_2_2_1","2_1_1_1"),]$re_pic1 <- children[children$test_lang == "Clear_After" & children$order %in% c("1_2_2_1","2_1_1_1"),]$sound2_item 
+children[children$test_lang == "Clear_After" & children$order %in% c("1_2_2_1","2_1_1_1"),]$re_pic2 <- children[children$test_lang == "Clear_After" & children$order %in% c("1_2_2_1","2_1_1_1"),]$sound1_item 
+children[children$test_lang == "Clear_After" & children$order %in% c("2_1_2_1","1_2_1_1"),]$re_pic2 <- children[children$test_lang == "Clear_After" & children$order %in% c("2_1_2_1","1_2_1_1"),]$sound3_item 
+children[children$test_lang == "Clear_After" & children$order %in% c("2_1_2_1","1_2_1_1"),]$re_pic3 <- children[children$test_lang == "Clear_After" & children$order %in% c("2_1_2_1","1_2_1_1"),]$sound2_item 
+
+children[children$trial_number > 17 & children$test_lang == "Clear_Before" & children$order %in% c("1_2_2_1","2_1_1_1"),]$re_pic1 <- children[children$trial_number > 17 & children$test_lang == "Clear_Before" & children$order %in% c("1_2_2_1","2_1_1_1"),]$sound2_item 
+children[children$trial_number > 17 & children$test_lang == "Clear_Before" & children$order %in% c("1_2_2_1","2_1_1_1"),]$re_pic2 <- children[children$trial_number > 17 & children$test_lang == "Clear_Before" & children$order %in% c("1_2_2_1","2_1_1_1"),]$sound1_item 
+children[children$trial_number > 17 & children$test_lang == "Clear_Before" & children$order %in% c("2_1_2_1","1_2_1_1"),]$re_pic2 <- children[children$trial_number > 17 & children$test_lang == "Clear_Before" & children$order %in% c("2_1_2_1","1_2_1_1"),]$sound3_item 
+children[children$trial_number > 17 & children$test_lang == "Clear_Before" & children$order %in% c("2_1_2_1","1_2_1_1"),]$re_pic3 <- children[children$trial_number > 17 & children$test_lang == "Clear_Before" & children$order %in% c("2_1_2_1","1_2_1_1"),]$sound2_item 
+
+children$acc <- NA
+children[children$instruction_number == "1",]$acc <- ifelse(children[children$instruction_number == "1",]$chosen_pic == children[children$instruction_number == "1",]$re_pic1,1,0 )
+children[children$instruction_number == "2",]$acc <- ifelse(children[children$instruction_number == "2",]$chosen_pic == children[children$instruction_number == "2",]$re_pic2,1,0 )
+children[children$instruction_number == "3",]$acc <- ifelse(children[children$instruction_number == "3",]$chosen_pic == children[children$instruction_number == "3",]$re_pic3,1,0 )
+
+# End the script fix
+###########################
+
+
+# Produce an item column, and merge with the item names used in the mcdi (i.e., add american names for)
+# querying wordbank
+children$item <- children$re_pic1
+children[children$instruction_number == "2",]$item <- children[children$instruction_number == "2",]$re_pic2
+children[children$instruction_number == "3",]$item <- children[children$instruction_number == "3",]$re_pic3
+children <- merge(children, read.csv("./Expt3_Learning/tested_words.csv"), by = "item")
+
+
+children$clarity <- "clear"
+children[children$test_lang == "Clear_After",]$clarity <- ifelse(children[children$test_lang == "Clear_After",]$instruction_number %in% c(2,3),"clear","distorted")
+children[children$test_lang == "Clear_Before" & children$trial_number <=17,]$clarity <- ifelse(children[children$test_lang == "Clear_Before" & children$trial_number <=17,]$instruction_number %in% c(1,2),"clear","distorted")
+children[children$test_lang == "Clear_Before" & children$trial_number >17,]$clarity <- ifelse(children[children$test_lang == "Clear_Before" & children$trial_number >17,]$instruction_number %in% c(2,3),"clear","distorted")
+children$clarity <- as.factor(children$clarity)
+children$block <- as.factor(ifelse(children$trial_number > 17, "Test","Training"))
+children$test_lang <- as.factor(children$test_lang)
+
+
+# Find out which children didn't complete and exclude them
+# We include "extra" participants
+num_test_trials <- summaryBy(acc ~ subject_id, 
+                             data = subset(children, clarity == "distorted" 
+                                           & block == "Test"), FUN = length) 
+# exclude non-completers
+noncomplete1 <- subset(num_test_trials, acc.length <8)
+noncomplete2 <- setdiff(as.vector(unique(as.factor(children$subject_id))),
+        as.vector(unique(as.factor(num_test_trials$subject_id))))
+# Full set of excluded children based on fussiness etc from Hanna's subject sheet + our noncompleters
+exclusion = c("tiY94","hEXBd","e6ael","O27zZ","FRI6o","uiBXd","9sb31","C9Nio",
+              "UICHK",noncomplete1,noncomplete2)
+children <- subset(children, !subject_id %in% exclusion)
+
+children$block <- ordered(children$block, levels = c("Training","Test"))
+
+```
+
+## Methods
+
+Participants were tested in preschools around Edinburgh, in the Edinburgh DevLab, and in the Edinburgh University community. The table below shows participants per age group. We aimed to test 8 participants per cell, but kept testing available participants until all cells were filled (leading to the surprlus of 4-year-olds).
+
+
+```{r expt3_methods}
+expt3_summary <- children %>%
+ 	dplyr::select(resp,subject_id,age,test_lang) %>%
+ 	dplyr::group_by(subject_id,age,test_lang) %>%
+ 	dplyr::summarise(responded = mean(resp,na.rm = T)) %>% 
+ 	dplyr::group_by(age,test_lang) %>%
+ 	dplyr::select(responded,subject_id,age,test_lang) %>%
+ 	dplyr::summarise(n = length(responded))
+```
+
+`r kable(tidyr::spread(expt3_summary,test_lang,n))`
+
+
+Participants completed 1 practice trial with sine wave speech, followed by the 16 training trials and 8 test trials. On each trial, participants would see two pictures and hear three instructions; they had to tap the mentioned picture after each instruction. The Experimenter tapped the green button to produce each instruction. 
+
+![2 choice word recognition task](Images/expt3.png)
+
+Half the participants heard were in a top-down condition: During the 16 training trials they heard two clear speech instructions followed by a distorted speech instruction (Clear-Clear-Distorted order). The other participants were in a bottom-up condition; during their 16 training trials they heard a distorted speech instruction followed by two clear speech instructions (Distorted-Clear-Clear order).
+
+After the 16 training trials, all participants took part in 8 test trials where distorted speech was presented before, and clear speech after (i.e., Distorted-Clear-Clear order).
+
+![Structure of Experiment 3](Images/expt3_structure.png)
+
+
+### Experiment 3 Graphs
+
+We do our analyses only on trials in which participants got the "clear" presentation of the words correct (because we don't want to look at vocab knowledge, at least not for now). But I'll first show the proportion of trials on which children were correct for the clear presentation. As you'll see accuracy is high. Error bars are 95% CIs. We don't graph 5-year-olds as a separate group, as there are only 3 of them, but they are included in analyses. 
+
+```{r expt3_graphs_unadjusted}
+ggplot(subset(children, clarity !="distorted" & age != "5"), aes(x = block, y = acc, color = test_lang))+facet_wrap(~age,nrow=1) + ylim(c(0,1))+stat_summary_bin(fun.data = mean_cl_boot)+theme_cowplot()+ggtitle("Accuracy on clear speech")
+```
+
+From now on, we remove all trials on which participants got the clear word incorrect. The first graph shows averaged data by block, and the second shows trial-by-trial data over the course of the study (test trials start on block 16). We don't 
+
+```{r expt3_graphs_adjusted}
+
+# Exclude trials where they got a clear word wrong
+wrong_clear <- summaryBy(acc ~ subject_id + trial_id, data = subset(children, clarity != "distorted")) 
+wrong_clear <- subset(wrong_clear, acc.mean <1)
+wrong_clear$subj_trial <- paste(wrong_clear$subject_id, wrong_clear$trial_id)
+children$subj_trial <- paste(children$subject_id,children$trial_id)
+children <- children[!children$subj_trial %in% wrong_clear$subj_trial,]
+
+
+
+age <- ggplot(subset(children, clarity=="distorted" & age != "5"), aes(x = block, y = acc, color = test_lang))+
+  facet_wrap(~age,nrow=1) + ylim(c(0,1))+
+  stat_summary_bin(fun.data = mean_cl_boot)+theme_cowplot()+ggtitle("Accuracy across ages, blocks and training types")
+
+
+
+speaker_match <- ggplot(subset(children, clarity=="distorted" & age != "5"), aes(x = block, y = acc, color = test_lang))+
+  facet_wrap(~speaker_match+age,nrow=2) + ylim(c(0,1))+
+  stat_summary_bin(fun.data = mean_cl_boot)+theme_cowplot()+ggtitle("Effect of speaker match")
+
+
+trial <- ggplot(subset(children, clarity == "distorted"  & age != "5"), aes(x = trial_number, y = acc, color = test_lang))+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))+
+  facet_wrap(~clarity+age,nrow=1) + 
+  ylim(c(0,1.05))+
+  ggtitle("Effect of learning")+
+  ylab("Accuracy")
+
+
+distance <- ggplot(subset(children, clarity=="distorted" & age != "5" & test_lang == "Clear_Before" & block == "Training"), aes(x = block, y = acc, color = distance))+
+  facet_wrap(~age,nrow=1) + ylim(c(0,1))+
+  stat_summary_bin(fun.data = mean_cl_boot)+theme_cowplot()+ggtitle("Effect of distance on Clear Before participants")
+
+
+repetition <- ggplot(subset(children,  age != "5"), aes(x = trial_number, y = log(play_counter), color = test_lang))+
+  geom_smooth(method = "loess")+
+  facet_wrap(~clarity+age,nrow=2) + 
+  ylab("log Number of repetitions per trial")+
+  ggtitle("Repetitions per trial over the study")
+
+
+#plot_grid(age, speaker_match,trial,distance)
+```
+
+```{r analyze_expt3, echo=FALSE,message=FALSE, include=FALSE}
+
+contrasts(children$speaker_match)[1] <- -1
+contrasts(children$block)[1] <- -1
+contrasts(children$test_lang)[1] <- -1
+
+major_analysis.expt3 <- brm(acc ~  1+ speaker_match*test_lang*scale(age_weeks)*block +(1+block|subject_id) +(1 + speaker_match*block*test_lang*scale(age_weeks)|item), 
+              data = subset(children, 
+                            clarity == "distorted" ), 
+              family = "bernoulli", iter = 1000)
+```              
+
+```{r analyze_expt3_training, echo=FALSE,message=FALSE, include=FALSE}
+z <- 1
+major_analysis.expt3.train <- brm(acc ~  1+ test_lang*scale(age_weeks) +(1|subject_id) +(1 + test_lang*scale(age_weeks)|item), 
+              data = subset(children, 
+                            clarity == "distorted" & block == "Training"), 
+              family = "bernoulli", iter = 1000)
+```              
+
+```{r analyze_expt3_test, echo=FALSE,message=FALSE, include=FALSE}
+z <- 1
+major_analysis.expt3.test <- brm(acc ~  1+ test_lang*scale(age_weeks) +(1|subject_id) +(1 + test_lang*scale(age_weeks)|item), 
+              data = subset(children, 
+                            clarity == "distorted" & block == "Test"), 
+              family = "bernoulli", iter = 1000)
+``` 
+
+## Analyses
+We'll start with a full analysis of distorted trials, comparing Block (training/test), Training regime (clear before/after), age (scaled in weeks), and speaker match (march/mismatch). Unsurprisingly, nothing is significant, except that kids get better with age.
+
+```{r print_expt3_analyses}
+z <- 1
+kable(convert_stan_to_dataframe(major_analysis.expt3),digits=2, caption = "Full Analysis")
+```
+
+
+### Top down effects
+
+```{r expt3_topdown_graph}
+age
+```
+
+#### Top down effects during training
+
+There was no large pop-out effect. Children improve with age, but not by much.
+
+```{r print_expt3_topdown_train}
+z <- 1
+kable(convert_stan_to_dataframe(major_analysis.expt3.train), digits=3, caption = "Are children more accurate when the clear sentence comes before? Not a lot more accurate (credible interval includes 0)")
+```
+
+#### Top down effects during test
+
+Did training that allowed pop-out subsequently allow children to do better at test? The effect is in the right direction, but is not significant.
+
+```{r print_expt3_topdown_test}
+z <- 1
+kable(convert_stan_to_dataframe(major_analysis.expt3.test), digits=3, caption = "Are children more accurate at Test when they have been trained on the clear sentence coming before? Maybe a little...")
+```
+
+
+### Does children's general performance improve with age
+We look at accuracy on clear speech (we return to the dataset on which trials are not excluded based on whether participants made a mistake indentifying clear speech items).
+
+```{r clear_speech_test, include = FALSE, echo = FALSE}
+# Need to reload the data
+children <- process_sine_data("./Expt3_Learning/Data")
+
+########
+# There was a slight error in the original js script, such that a couple of columns got transposed for
+# one condition. So, we need to fix that and then adjust the accuracy scores to account for it
+children$re_pic1 = children$sound1_item
+children$re_pic2 = children$sound2_item
+children$re_pic3 = children$sound3_item
+children[children$test_lang == "Clear_After" & children$order %in% c("1_2_2_1","2_1_1_1"),]$re_pic1 <- children[children$test_lang == "Clear_After" & children$order %in% c("1_2_2_1","2_1_1_1"),]$sound2_item 
+children[children$test_lang == "Clear_After" & children$order %in% c("1_2_2_1","2_1_1_1"),]$re_pic2 <- children[children$test_lang == "Clear_After" & children$order %in% c("1_2_2_1","2_1_1_1"),]$sound1_item 
+children[children$test_lang == "Clear_After" & children$order %in% c("2_1_2_1","1_2_1_1"),]$re_pic2 <- children[children$test_lang == "Clear_After" & children$order %in% c("2_1_2_1","1_2_1_1"),]$sound3_item 
+children[children$test_lang == "Clear_After" & children$order %in% c("2_1_2_1","1_2_1_1"),]$re_pic3 <- children[children$test_lang == "Clear_After" & children$order %in% c("2_1_2_1","1_2_1_1"),]$sound2_item 
+
+children[children$trial_number > 17 & children$test_lang == "Clear_Before" & children$order %in% c("1_2_2_1","2_1_1_1"),]$re_pic1 <- children[children$trial_number > 17 & children$test_lang == "Clear_Before" & children$order %in% c("1_2_2_1","2_1_1_1"),]$sound2_item 
+children[children$trial_number > 17 & children$test_lang == "Clear_Before" & children$order %in% c("1_2_2_1","2_1_1_1"),]$re_pic2 <- children[children$trial_number > 17 & children$test_lang == "Clear_Before" & children$order %in% c("1_2_2_1","2_1_1_1"),]$sound1_item 
+children[children$trial_number > 17 & children$test_lang == "Clear_Before" & children$order %in% c("2_1_2_1","1_2_1_1"),]$re_pic2 <- children[children$trial_number > 17 & children$test_lang == "Clear_Before" & children$order %in% c("2_1_2_1","1_2_1_1"),]$sound3_item 
+children[children$trial_number > 17 & children$test_lang == "Clear_Before" & children$order %in% c("2_1_2_1","1_2_1_1"),]$re_pic3 <- children[children$trial_number > 17 & children$test_lang == "Clear_Before" & children$order %in% c("2_1_2_1","1_2_1_1"),]$sound2_item 
+
+children$acc <- NA
+children[children$instruction_number == "1",]$acc <- ifelse(children[children$instruction_number == "1",]$chosen_pic == children[children$instruction_number == "1",]$re_pic1,1,0 )
+children[children$instruction_number == "2",]$acc <- ifelse(children[children$instruction_number == "2",]$chosen_pic == children[children$instruction_number == "2",]$re_pic2,1,0 )
+children[children$instruction_number == "3",]$acc <- ifelse(children[children$instruction_number == "3",]$chosen_pic == children[children$instruction_number == "3",]$re_pic3,1,0 )
+
+# End the script fix
+###########################
+
+
+# Produce an item column, and merge with the item names used in the mcdi (i.e., add american names for)
+# querying wordbank
+children$item <- children$re_pic1
+children[children$instruction_number == "2",]$item <- children[children$instruction_number == "2",]$re_pic2
+children[children$instruction_number == "3",]$item <- children[children$instruction_number == "3",]$re_pic3
+children <- merge(children, read.csv("./Expt3_Learning/tested_words.csv"), by = "item")
+
+
+children$clarity <- "clear"
+children[children$test_lang == "Clear_After",]$clarity <- ifelse(children[children$test_lang == "Clear_After",]$instruction_number %in% c(2,3),"clear","distorted")
+children[children$test_lang == "Clear_Before" & children$trial_number <=17,]$clarity <- ifelse(children[children$test_lang == "Clear_Before" & children$trial_number <=17,]$instruction_number %in% c(1,2),"clear","distorted")
+children[children$test_lang == "Clear_Before" & children$trial_number >17,]$clarity <- ifelse(children[children$test_lang == "Clear_Before" & children$trial_number >17,]$instruction_number %in% c(2,3),"clear","distorted")
+children$clarity <- as.factor(children$clarity)
+children$block <- as.factor(ifelse(children$trial_number > 17, "Test","Training"))
+children$test_lang <- as.factor(children$test_lang)
+
+
+# Find out which children didn't complete and exclude them
+# We include "extra" participants
+num_test_trials <- summaryBy(acc ~ subject_id, 
+                             data = subset(children, clarity == "distorted" 
+                                           & block == "Test"), FUN = length) 
+# exclude non-completers
+noncomplete1 <- subset(num_test_trials, acc.length <8)
+noncomplete2 <- setdiff(as.vector(unique(as.factor(children$subject_id))),
+        as.vector(unique(as.factor(num_test_trials$subject_id))))
+# Full set of excluded children based on fussiness etc from Hanna's subject sheet + our noncompleters
+exclusion = c("tiY94","hEXBd","e6ael","O27zZ","FRI6o","uiBXd","9sb31","C9Nio",
+              "UICHK",noncomplete1,noncomplete2)
+children <- subset(children, !subject_id %in% exclusion)
+
+children$block <- ordered(children$block, levels = c("Training","Test"))
+
+contrasts(children$speaker_match)[1] <- -1
+contrasts(children$block)[1] <- -1
+contrasts(children$test_lang)[1] <- -1
+
+expt3.clear <- brm(acc ~  1+ scale(age_weeks) +(1|subject_id) +(1 + scale(age_weeks)|item), 
+              data = subset(children, 
+                            clarity != "distorted"), 
+              family = "bernoulli", iter = 1000)
+
+
+expt3.distorted <- brm(acc ~  1+ scale(age_weeks) +(1|subject_id) +(1 + scale(age_weeks)|item), 
+              data = subset(children, 
+                            clarity == "distorted"), 
+              family = "bernoulli", iter = 1000)
+
+# Exclude trials where they got a clear word wrong
+wrong_clear <- summaryBy(acc ~ subject_id + trial_id, data = subset(children, clarity != "distorted")) 
+wrong_clear <- subset(wrong_clear, acc.mean <1)
+wrong_clear$subj_trial <- paste(wrong_clear$subject_id, wrong_clear$trial_id)
+children$subj_trial <- paste(children$subject_id,children$trial_id)
+children <- children[!children$subj_trial %in% wrong_clear$subj_trial,]
+
+
+expt3.distorted.excluded <- brm(acc ~  1+ scale(age_weeks) +(1|subject_id) +(1 + scale(age_weeks)|item), 
+              data = subset(children, 
+                            clarity == "distorted"), 
+              family = "bernoulli", iter = 1000)
+
+
+```
+
+```{r print_expt3_clarity_test}
+kable(convert_stan_to_dataframe(expt3.clear), digits=3, caption = "Are children more accurate on clear speech as they age?")
+kable(convert_stan_to_dataframe(expt3.distorted), digits=3, caption = "Are children more accurate on distorted speech as they age?")
+kable(convert_stan_to_dataframe(expt3.distorted.excluded), digits=3, caption = "Are children more accurate on distorted speech as they age? (excluding incorrect questions)")
+
+```
+
+#### Accuracy against chance by age
+
+We look at children's accuracy on distorted speech in each age group. 3s and 4s are above chance, but the CI for 2s includes 0, even in the topdown clear-speech-first condition.
+
+```{r analyze_expt3_age, echo=FALSE,message=FALSE, include=FALSE}
+
+age.2 <- brm(acc ~  1+ (1|subject_id) +(1|item), 
+              data = subset(children, 
+                            clarity == "distorted" & age == "2"), 
+              family = "bernoulli", iter = 1000)
+
+age.3 <- brm(acc ~  1+ (1|subject_id) +(1|item), 
+              data = subset(children, 
+                            clarity == "distorted" & age == "3"), 
+              family = "bernoulli", iter = 1000)
+
+age.4 <- brm(acc ~  1+ (1|subject_id) +(1|item), 
+              data = subset(children, 
+                            clarity == "distorted"  & age == "4"), 
+              family = "bernoulli", iter = 1000)
+
+``` 
+
+```{r print_expt3_age_test}
+kable(convert_stan_to_dataframe(age.2), digits=3, caption = "Overall accuracy at Age 2")
+kable(convert_stan_to_dataframe(age.3), digits=3, caption = "Overall accuracy at Age 3")
+kable(convert_stan_to_dataframe(age.4), digits=3, caption = "Overall accuracy at Age 4")
+
+```
+
+```{r age_test_topdown, echo=FALSE, include=FALSE}
+age.2.TD <- brm(acc ~  1+ (1|subject_id) +(1|item), 
+              data = subset(children, 
+                            clarity == "distorted" & age == "2" & test_lang == "Clear_Before"), 
+              family = "bernoulli", iter = 1000)
+
+```
+
+```{r print_age_test_topdown}
+kable(convert_stan_to_dataframe(age.2.TD), digits=3, caption = "Overall accuracy at Age 2 in TopDown condition")
+
+
+```
+
+
+
+### Improvement in accuracy over the experiment
+
+We look at how children's accuracy improves over the experiment.
+
+```{r analyze_expt3_learning, echo=FALSE,message=FALSE, include=FALSE}
+
+expt3.learning <- brm(acc ~  1+ scale(trial_number)*scale(age_weeks) +(1+scale(trial_number)|subject_id) +(1 + scale(trial_number)*scale(age_weeks)|item), 
+              data = subset(children, 
+                            clarity == "distorted" ), 
+              family = "bernoulli", iter = 1000)
+
+``` 
+
+```{r print_expt3_learning}
+trial
+kable(convert_stan_to_dataframe(expt3.learning ), digits=3, caption = "Learning over trials by age")
+z<-0
+```
+
+
+
+### Change in repetitions given 
+
+#### Repetitions during training
+
+How often do children request a repetition during training trials (trials 2-17), across the training conditions?
+
+Children in the Clear Before condition are less likely to request a repetition overall, and there is a marginal effect such that the rate at which they request declines faster over the training phase.
+
+
+```{r analyze_expt3_reps_train, echo=FALSE,message=FALSE, include=FALSE}
+
+expt3.rep_train <- brm(log(play_counter) ~  1+ scale(trial_number)*test_lang +(1+scale(trial_number)|subject_id) +(1+scale(trial_number)*test_lang|item), 
+              data = subset(children, 
+                             clarity == "distorted" & block == "Training" ), 
+               iter = 1000)
+
+expt3.rep_train.before <- brm(log(play_counter) ~  1+ scale(trial_number) +(1+scale(trial_number)|subject_id) +(1+scale(trial_number)|item), 
+              data = subset(children, 
+                             clarity == "distorted" & block == "Training" & test_lang == "Clear_Before"), 
+               iter = 1000)
+
+expt3.rep_train.after <- brm(log(play_counter) ~  1+ scale(trial_number) +(1+scale(trial_number)|subject_id) +(1+scale(trial_number)|item), 
+              data = subset(children, 
+                             clarity == "distorted" & block == "Training" & test_lang == "Clear_After"), 
+               iter = 1000)
+
+
+
+``` 
+
+```{r print_expt3_reps_train}
+repetition
+z<-0
+kable(convert_stan_to_dataframe(expt3.rep_train ), digits=3, caption = "Repetitions during training phase by trial number and condition")
+
+kable(convert_stan_to_dataframe(expt3.rep_train.before ), digits=3, caption = "Repetitions during training phase by trial number -- Clear Before")
+
+kable(convert_stan_to_dataframe(expt3.rep_train.after ), digits=3, caption = "Repetitions during training phase by trial number -- Clear After")
+
+```
+
+#### Repetitions at test
+
+Does training regime affect how often children request repetitions during the test phase (trials 18-25)? Recall that test phase is matched across participants.
+
+```{r analyze_expt3_reps_test, echo=FALSE,message=FALSE, include=FALSE}
+expt3.rep_test <- brm(log(play_counter) ~  1+ scale(trial_number)*test_lang +(1+scale(trial_number)|subject_id) +(1+scale(trial_number)*test_lang|item), 
+              data = subset(children, 
+                             clarity == "distorted" & block == "Test" ), 
+               iter = 1000)
+```
+
+```{r print_expt3_reps_test}
+kable(convert_stan_to_dataframe(expt3.rep_test ), digits=3, caption = "Repetitions during test phase by trial number and condition")
+```
+
+###  Other analyses
+
+#### Effect of speaker match
+
+We don't see much in the way of an effect of speaker match (same voice for clear/distorted stimuli). 
+
+```{r}
+speaker_match
+```
+
+#### Effect of prime distance
+
+We don't see much in the way of an effect of prime distance (whether the to-be-repeated clear sentence in the Clear_Before condition comes immediately prior to the distorted sentence, or one sentence prior).
+
+```{r}
+distance
+```
+
+## Conclusions
+
+While 2-year-olds had difficulty interpreting sine wave speech, three- and four-year-olds showed above chance performance on our task. Nevertheless, their accuracy was still low. Looking at the graphs, children's accuracy improved a little with practice, but there was no step-change: Even 4-year-olds had difficulty with this task. In fact, their performance was numerically lower than in Experiment 1's 2AFC task. Perhaps this was due to the semantically bleached stimuli we used in Expts 2 & 3 (where the carrier phrase *Can you touch...* did not provide information about the continuation).
+
+Interestingly, we found little evidence that top-down information plays an important role in children's accuracy interpretating the instructions. First, we found little evidence for pop-out effects: During training, accuracy was not much higher in the Clear Before condition than Clear After. In addition, children who were given a top-down learning protocol were not better at test. Note, though, that both results were marginal: It seems more likely that there was a small effect we couldn't measure, than no effect at all.
+
+However, top-down information did appear to affect the number of repetitions that participants asked for (at least for ages 3 and 4). Under "pop out" conditions, children were less likely to request repetitions. Unfortunately, we can't tell if this reflects improved understanding in the Clear_Before group, or improved confidence in the Clear_Before group. Because children in the Clear Before group show no effect of accuracy overall, and because increased repetitions is actually associated with worse performance (nb. that analysis is not shown here), we suspect that top down information is actually improving confidence rather than accuracy.
+
+
+# Ideas for the next experiment
+
+* Only allow participants a single presentation of each stimulus.
+* Create sentence stimuli (and pictures) that are more complex, to allow for increased top-down predictability and redundancy (e.g., rather than have participants respond to *touch the fireman*, have them respond to *the fireman is wearing a yellow hat*.
+* Test older children as well, to develop a better understanding of developmental change?
+* Otherwise, keep the design of Experiment 3?
+* One issue -- might the pictures already be providing some top-down info?

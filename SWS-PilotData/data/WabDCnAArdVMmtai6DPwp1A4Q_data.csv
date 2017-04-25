@@ -1,0 +1,2 @@
+subject_id,trial_number,trial_id,target_sentence,foil_sentence,target_side,foil_side,trial_type,presentation_order,date_stamp,time_stamp,side_chosen,accuracy,rt,times_played,date_of_birth,ethnicity,native_lang,other_langs,parental_occ,dev_info,birth_order,num_siblings,gender
+WabDCnAArdVMmtai6DPwp1A4Q,1,c,the_mouse_loves_cheese,the_cat_is_sleeping,right,left,training,1,09/07/2016,10:26,right,1,9730,2,25/10/14,,,,,,1,0,male

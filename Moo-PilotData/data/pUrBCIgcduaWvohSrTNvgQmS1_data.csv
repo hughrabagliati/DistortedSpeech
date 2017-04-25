@@ -1,0 +1,11 @@
+subject_id,trial_number,trial_id,target_side,foil_side,trial_type,date_stamp,time_stamp,side_chosen,accuracy,rt,date_of_birth,ethnicity,native_lang,other_langs,parental_occ,dev_info,birth_order,num_siblings,gender
+pUrBCIgcduaWvohSrTNvgQmS1,1,c,right,left,training,9/25/2016,10:15,left,0,34140,2014-02-09,,,,,,2,1,female
+pUrBCIgcduaWvohSrTNvgQmS1,2,b,left,right,training,9/25/2016,10:15,right,0,14794,2014-02-09,,,,,,2,1,female
+pUrBCIgcduaWvohSrTNvgQmS1,3,a,right,left,training,9/25/2016,10:15,right,1,7361,2014-02-09,,,,,,2,1,female
+pUrBCIgcduaWvohSrTNvgQmS1,4,13,left,right,critical,9/25/2016,10:15,right,0,90233,2014-02-09,,,,,,2,1,female
+pUrBCIgcduaWvohSrTNvgQmS1,5,7,left,right,critical,9/25/2016,10:15,right,0,6967,2014-02-09,,,,,,2,1,female
+pUrBCIgcduaWvohSrTNvgQmS1,6,24,right,left,critical,9/25/2016,10:15,right,1,7861,2014-02-09,,,,,,2,1,female
+pUrBCIgcduaWvohSrTNvgQmS1,7,14,right,left,critical,9/25/2016,10:15,right,1,8418,2014-02-09,,,,,,2,1,female
+pUrBCIgcduaWvohSrTNvgQmS1,8,6,right,left,critical,9/25/2016,10:15,right,1,9347,2014-02-09,,,,,,2,1,female
+pUrBCIgcduaWvohSrTNvgQmS1,9,20,left,right,critical,9/25/2016,10:15,right,0,9214,2014-02-09,,,,,,2,1,female
+pUrBCIgcduaWvohSrTNvgQmS1,10,23,right,left,critical,9/25/2016,10:15,right,1,10907,2014-02-09,,,,,,2,1,female

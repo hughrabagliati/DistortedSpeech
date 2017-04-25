@@ -1,0 +1,7 @@
+subject_id,trial_number,trial_id,target_sentence,foil_sentence,target_side,foil_side,trial_type,presentation_order,date_stamp,time_stamp,side_chosen,accuracy,rt,times_played,date_of_birth,ethnicity,native_lang,other_langs,parental_occ,dev_info,birth_order,num_siblings,gender
+5NZzMfs4aPaTAaeae8JgKTzlB,1,c,the_mouse_loves_cheese,the_cat_is_sleeping,right,left,training,1,9/23/2016,10:20,right,1,7109.999999999999,1,2013-06-11,,,,,,1,0,female
+5NZzMfs4aPaTAaeae8JgKTzlB,2,b,the_frog_is_jumping,the_mouse_loves_cheese,left,right,training,0,9/23/2016,10:20,right,0,13271,1,2013-06-11,,,,,,1,0,female
+5NZzMfs4aPaTAaeae8JgKTzlB,3,a,the_cat_is_sleeping,the_frog_is_jumping,right,left,training,1,9/23/2016,10:20,left,0,10481,1,2013-06-11,,,,,,1,0,female
+5NZzMfs4aPaTAaeae8JgKTzlB,4,16,she_grew_lots_of_tomatoes,the_turtle_lives_in_the_sea,left,right,critical,0,9/23/2016,10:20,right,0,9999,1,2013-06-11,,,,,,1,0,female
+5NZzMfs4aPaTAaeae8JgKTzlB,5,24,the_monkey_is_up_in_the_tree,the_ladybirds_are_very_red,right,left,critical,0,9/23/2016,10:20,right,1,6936.999999999999,1,2013-06-11,,,,,,1,0,female
+5NZzMfs4aPaTAaeae8JgKTzlB,6,3,the_horses_are_in_the_field,the_fish_are_in_the_river,left,right,critical,0,9/23/2016,10:20,left,1,5856.999999999999,2,2013-06-11,,,,,,1,0,female

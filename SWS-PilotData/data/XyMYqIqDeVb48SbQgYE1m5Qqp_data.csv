@@ -1,0 +1,3 @@
+subject_id,trial_number,trial_id,target_sentence,foil_sentence,target_side,foil_side,trial_type,presentation_order,date_stamp,time_stamp,side_chosen,accuracy,rt,times_played,date_of_birth,ethnicity,native_lang,other_langs,parental_occ,dev_info,birth_order,num_siblings,gender
+XyMYqIqDeVb48SbQgYE1m5Qqp,1,c,the_mouse_loves_cheese,the_cat_is_sleeping,right,left,training,1,9/17/2016,14:46,right,1,7060.999999999999,1,19/09/1978,caucasian,English,,Teachers,,1,1,female
+XyMYqIqDeVb48SbQgYE1m5Qqp,2,b,the_frog_is_jumping,the_mouse_loves_cheese,left,right,training,0,9/17/2016,14:46,left,1,867.9999999999991,2,19/09/1978,caucasian,English,,Teachers,,1,1,female

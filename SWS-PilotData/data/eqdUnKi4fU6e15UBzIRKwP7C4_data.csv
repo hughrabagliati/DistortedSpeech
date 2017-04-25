@@ -1,0 +1,7 @@
+subject_id,trial_number,trial_id,target_sentence,foil_sentence,target_side,foil_side,trial_type,presentation_order,date_stamp,time_stamp,side_chosen,accuracy,rt,times_played,date_of_birth,ethnicity,native_lang,other_langs,parental_occ,dev_info,birth_order,num_siblings,gender
+eqdUnKi4fU6e15UBzIRKwP7C4,1,c,the_mouse_loves_cheese,the_cat_is_sleeping,right,left,training,1,9/29/2016,11:19,right,1,6259.999999999999,3,2013-11-19,,,,,,1,1,female
+eqdUnKi4fU6e15UBzIRKwP7C4,2,b,the_frog_is_jumping,the_mouse_loves_cheese,left,right,training,0,9/29/2016,11:19,right,0,7019.999999999999,1,2013-11-19,,,,,,1,1,female
+eqdUnKi4fU6e15UBzIRKwP7C4,3,a,the_cat_is_sleeping,the_frog_is_jumping,right,left,training,1,9/29/2016,11:19,right,1,2674.999999999999,1,2013-11-19,,,,,,1,1,female
+eqdUnKi4fU6e15UBzIRKwP7C4,4,11,the_dog_is_barking,the_cheese_is_tasty,left,right,critical,0,9/29/2016,11:19,right,0,8091.999999999999,2,2013-11-19,,,,,,1,1,female
+eqdUnKi4fU6e15UBzIRKwP7C4,5,6,the_bee_is_on_the_flower,the_birds_are_flying,left,right,critical,0,9/29/2016,11:19,right,0,4950.999999999999,1,2013-11-19,,,,,,1,1,female
+eqdUnKi4fU6e15UBzIRKwP7C4,6,19,he_made_a_salad,we_took_some_sandwiches,left,right,critical,1,9/29/2016,11:19,right,0,3325.999999999999,1,2013-11-19,,,,,,1,1,female
